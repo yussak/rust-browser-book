@@ -81,7 +81,7 @@ impl HttpClient {
 
         match core::str::from_utf8(&received) {
             Ok(response) => HttpResponse::new(response.to_string()),
-            Err(e) => Err(Error::Network(format!("Invalid reeived response: {}", e))),
+            Err(e) => Err(Error::Network(format!("Invalid received response: {}", e))),
         }
     }
 }
