@@ -17,4 +17,4 @@ required-features = ["wasabi"]
 [dependencies]
 saba_core = {path = "./saba_core"}
 net_wasabi = {path="./net/wasabi", optional=true}
-noli = { git = "https://github.com/hikaliumz/wasabi.git", branch = "for_saba", optional = true }
+noli = { git = "https://github.com/hikalium/wasabi.git", branch = "for_saba", optional = true }

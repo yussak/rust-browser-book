@@ -69,6 +69,10 @@ checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 [[package]]
 name = "net_wasabi"
 version = "0.1.0"
+dependencies = [
+ "noli",
+ "saba_core",
+]
 
 [[package]]
 name = "noli"
@@ -111,7 +115,9 @@ dependencies = [
 name = "saba"
 version = "0.1.0"
 dependencies = [
+ "net_wasabi",
  "noli",
+ "saba_core",
 ]
 
 [[package]]
