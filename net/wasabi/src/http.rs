@@ -1,13 +1,14 @@
 extern crate alloc;
-use core::fmt::Error;
-use core::net::SocketAddr;
 
-use alloc::String::String;
+use alloc::format;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use noli::net::lookup_host;
 use noli::net::SocketAddr;
 use noli::net::TcpStream;
 use saba_core::error::Error;
 use saba_core::http::HttpResponse;
-
 pub struct HttpClient {}
 
 impl HttpClient {
@@ -41,7 +42,7 @@ impl HttpClient {
             }
         };
 
-        let mut request = String::ffrom("GET /");
+        let mut request = String::from("GET /");
         request.push_str(&path);
         request.push_str(" HTTP/1.1\n");
 
@@ -63,7 +64,7 @@ impl HttpClient {
 
         let mut received = Vec::new();
         loop {
-            let mut buf = [0u8, 4096];
+            let mut buf = [0u8; 4096];
             let bytes_read = match stream.read(&mut buf) {
                 Ok(bytes) => bytes,
                 Err(_) => {
