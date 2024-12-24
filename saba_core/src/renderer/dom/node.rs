@@ -1,3 +1,21 @@
+use core::{cell::RefCell, str::FromStr};
+
+use alloc::{
+    format,
+    rc::{Rc, Weak},
+    string::String,
+    vec::Vec,
+};
+
+use crate::renderer::html::attribute::Attribute;
+
+#[derive(Debug, Clone)]
+pub enum NodeKind {
+    Document,
+    Element(Element),
+    Text(String),
+}
+
 #[derive(Debug, Clone)]
 pub struct Node {
     pub kind: NodeKind,
@@ -106,5 +124,50 @@ impl Window {
 
     pub fn document(&self) -> Rc<RefCell<Node>> {
         self.document.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Element {
+    kind: ElementKind,
+    attributes: Vec<Attribute>,
+}
+
+impl Element {
+    pub fn new(element_name: &str, attributes: Vec<Attribute>) -> Self {
+        Self {
+            kind: ElementKind::from_str(element_name)
+                .expect("failed to convert string to ElementKind"),
+            attributes,
+        }
+    }
+
+    pub fn kind(&self) -> ElementKind {
+        self.kind
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ElementKind {
+    Html,
+    Head,
+    Style,
+    Script,
+    Body,
+}
+
+impl FromStr for ElementKind {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "html" => Ok(ElementKind::Html),
+            "head" => Ok(ElementKind::Head),
+            "style" => Ok(ElementKind::Style),
+            "script" => Ok(ElementKind::Script),
+            "body" => Ok(ElementKind::Body),
+
+            _ => Err(format!("unimplemented element name {:?}", s)),
+        }
     }
 }
