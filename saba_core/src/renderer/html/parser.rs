@@ -190,6 +190,39 @@ impl HtmlParser {
                     self.mode = InsertionMode::Inbody;
                     continue;
                 }
+
+                InsertionMode::InBody => match token {
+                    Some(HtmlToken::EndTag { ref tag }) => match tag.as_str() {
+                        "body" => {
+                            self.mode = InsertionMode::AfterBody;
+                            token = self.t.next();
+                            if !self.contain_in_stack(ElementKind::Body) {
+                                // パースの失敗。トークンを無視
+                                continue;
+                            }
+                            self.pop_until(ElementKind::Body);
+                            continue;
+                        }
+
+                        "html" => {
+                            if self.pop_current_node(ElementKind::Body) {
+                                self.mode = InsertionMode::AfterBody;
+                                assert!(self.pop_current_node(ElementKind::Html));
+                            } else {
+                                token = self.t.next();
+                            }
+                            continue;
+                        }
+                        _ => {
+                            token = self.t.next();
+                        }
+                    },
+
+                    Some(HtmlToken::Eof) | None => {
+                        return self.window.clone();
+                    }
+                    _ => {}
+                },
             }
         }
         self.window.clone()
