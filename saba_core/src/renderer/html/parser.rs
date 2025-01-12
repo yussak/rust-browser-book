@@ -1,4 +1,4 @@
-use core::cell::RefCell;
+use core::{cell::RefCell, str::FromStr};
 
 use alloc::{rc::Rc, vec::Vec};
 
@@ -190,7 +190,7 @@ impl HtmlParser {
                     }
 
                     self.insert_element("body", Vec::new());
-                    self.mode = InsertionMode::Inbody;
+                    self.mode = InsertionMode::InBody;
                     continue;
                 }
 
