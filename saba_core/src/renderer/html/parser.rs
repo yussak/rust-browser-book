@@ -205,6 +205,12 @@ impl HtmlParser {
                             token = self.t.next();
                             continue;
                         }
+
+                        "h1|h2" => {
+                            self.insert_element(tag, attributes.to_vec());
+                            token = self.t.next();
+                            continue;
+                        }
                         _ => {
                             token = self.t.next();
                         }
