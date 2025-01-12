@@ -240,6 +240,14 @@ impl HtmlParser {
                             continue;
                         }
 
+                        "h1|h2" => {
+                            let element_kind = ElementKind::from_str(tag)
+                                .expect("failed to convert string to ElementKind");
+                            token = self.t.next();
+                            self.pop_until(element_kind);
+                            continue;
+                        }
+
                         _ => {
                             token = self.t.next();
                         }
