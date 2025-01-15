@@ -512,3 +512,20 @@ pub enum InsertionMode {
     AfterBody,
     AfterAfterBody,
 }
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::*;
+
+    #[test]
+    fn test_empty() {
+        let html = " ".to_string();
+        let t = HtmlTokenizer::new(html);
+        let window = HtmlParser::new(t).construct_tree();
+        let expected = Rc::new(RefCell::new(Node::new(NodeKind::Document)));
+
+        assert_eq!(expected, window.borrow().document());
+    }
+}
