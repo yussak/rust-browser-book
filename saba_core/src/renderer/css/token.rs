@@ -51,6 +51,11 @@ impl Iterator for CssTokenizer {
                     let value = self.consume_string_token();
                     CssToken::StringToken(value)
                 }
+                '0'..='9' => {
+                    let t = CssToken::Number(self.consume_numeric_token());
+                    self.pos -= 1;
+                    t
+                }
                 _ => {
                     unimplemented!("char {} is not supported yet.", c);
                 }
@@ -81,5 +86,37 @@ impl CssTokenizer {
         }
 
         s
+    }
+
+    fn consume_numeric_token(&mut self) -> f64 {
+        let mut num = 0f64;
+        let mut floating = false;
+        let mut floating_digit = 1f64;
+
+        loop {
+            if self.pos >= self.input.len() {
+                return num;
+            }
+
+            let c = self.input[self.pos];
+            match c {
+                '0'..='9' => {
+                    if floating {
+                        floating_digit *= 1f64 / 10f64;
+                        num += (c.to_digit(10).unwrap() as f64) * floating_digit
+                    } else {
+                        num = num * 10.0 + (c.to_digit(10).unwrap() as f64);
+                    }
+                    self.pos += 1;
+                }
+                '.' => {
+                    floating = true;
+                    self.pos += 1;
+                }
+                _ => break,
+            }
+        }
+
+        num
     }
 }
