@@ -60,7 +60,7 @@ impl Iterator for CssTokenizer {
                     // 今回は常に #ID の形式のIDセレクタとして扱う
                     let value = self.consume_ident_token();
                     self.pos -= 1;
-                    CssToken::HashToken(value);
+                    CssToken::HashToken(value)
                 }
                 '-' => {
                     // 今回は負の数は取り扱わないため、ハイフンは識別子の一つとして扱う
@@ -100,6 +100,12 @@ impl Iterator for CssTokenizer {
 }
 
 impl CssTokenizer {
+    pub fn new(css: String) -> Self {
+        Self {
+            pos: 0,
+            input: css.chars().collect(),
+        }
+    }
     // 再びダブルクオーテーションまたはシングルクオーテーションが現れるまで、入力を文字として解釈する
     fn consume_string_token(&mut self) -> String {
         let mut s = String::new();
@@ -180,6 +186,6 @@ mod tests {
     fn test_empty() {
         let style = "".to_string();
         let mut t = CssTokenizer::new(style);
-        assert!(t.next()).is_none();
+        assert!(t.next().is_none());
     }
 }
