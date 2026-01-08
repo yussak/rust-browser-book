@@ -66,6 +66,7 @@ impl Iterator for CssTokenizer {
                     // 今回は負の数は取り扱わないため、ハイフンは識別子の一つとして扱う
                     let t = CssToken::Ident(self.consume_ident_token());
                     self.pos -= 1;
+
                     t
                 }
                 '@' => {
@@ -156,16 +157,29 @@ impl CssTokenizer {
         s.push(self.input[self.pos]);
 
         loop {
-          self.pos +=1;
-          let c = self.input[self.pos];
-          match c {
-            'a'..='z' | 'A'..='Z' \ '0'..='9' | '-' | '_' => {
-              s.push(c);
+            self.pos += 1;
+            let c = self.input[self.pos];
+            match c {
+                'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => {
+                    s.push(c);
+                }
+                _ => break,
             }
-            _=> break;
-          }
         }
 
         s
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::string::ToString;
+
+    #[test]
+    fn test_empty() {
+        let style = "".to_string();
+        let mut t = CssTokenizer::new(style);
+        assert!(t.next()).is_none();
     }
 }
