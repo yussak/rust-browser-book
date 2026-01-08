@@ -56,6 +56,37 @@ impl Iterator for CssTokenizer {
                     self.pos -= 1;
                     t
                 }
+                '#' => {
+                    // 今回は常に #ID の形式のIDセレクタとして扱う
+                    let value = self.consume_ident_token();
+                    self.pos -= 1;
+                    CssToken::HashToken(value);
+                }
+                '-' => {
+                    // 今回は負の数は取り扱わないため、ハイフンは識別子の一つとして扱う
+                    let t = CssToken::Ident(self.consume_ident_token());
+                    self.pos -= 1;
+                    t
+                }
+                '@' => {
+                    if self.input[self.pos + 1].is_ascii_alphabetic()
+                        && self.input[self.pos + 2].is_alphanumeric()
+                        && self.input[self.pos + 3].is_alphanumeric()
+                    {
+                        // skip '@'
+                        self.pos += 1;
+                        let t = CssToken::AtKeyword(self.consume_ident_token());
+                        self.pos -= 1;
+                        t
+                    } else {
+                        CssToken::Delim('@')
+                    }
+                }
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let t = CssToken::Ident(self.consume_ident_token());
+                    self.pos -= 1;
+                    t
+                }
                 _ => {
                     unimplemented!("char {} is not supported yet.", c);
                 }
@@ -118,5 +149,23 @@ impl CssTokenizer {
         }
 
         num
+    }
+
+    fn consume_ident_token(&mut self) -> String {
+        let mut s = String::new();
+        s.push(self.input[self.pos]);
+
+        loop {
+          self.pos +=1;
+          let c = self.input[self.pos];
+          match c {
+            'a'..='z' | 'A'..='Z' \ '0'..='9' | '-' | '_' => {
+              s.push(c);
+            }
+            _=> break;
+          }
+        }
+
+        s
     }
 }
