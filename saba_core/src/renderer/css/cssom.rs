@@ -1,6 +1,9 @@
 use core::iter::Peekable;
 
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use crate::renderer::css::token::{CssToken, CssTokenizer};
 
