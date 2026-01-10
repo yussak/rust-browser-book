@@ -55,3 +55,13 @@ impl QualifiedRule {
     }
 }
 
+// TODO: #[derive(Debug, Clone, PartialEq, Eq)]だが必要になったら追加してみたいので一旦コメントアウト
+pub enum Selector {
+    // タグ名で指定するセレクタ
+    TypeSelector(String),
+    ClassSelector(String),
+    IdSelector(String),
+    // パース中にエラーが起こったときに使用されるセレクタ
+    UnknownSelector,
+}
+
