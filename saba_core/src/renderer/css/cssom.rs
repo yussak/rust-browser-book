@@ -72,6 +72,40 @@ impl CssParser {
         }
       }
     }
+
+    fn consume_selector(&mut self) -> Selector {
+      let token = match self.t.next() {
+        Some(t) => t,
+        None =>  panic!("should have a token but got None")
+      };
+
+      match token {
+        CssToken::HashToken(value) => Selector::IdSelector(value[1..].to_string()),
+        CssToken::Delim(delim)=> {
+          if delim == '.' {
+            return Selector::ClassSelector((self.consume_ident()));
+          }
+          panic!("Parse error: {:?} is an unexpected token.", token);
+        }
+        CssToken::Ident(ident) => {
+          // a:hoverのようなセレクタはタイプセレクタとして扱うため、
+          // コロンがでてきたら宣言ブロックの開始直前までトークンを進める
+          if self.t.peek() == Some(&CssToken::Colon) {
+            while self.t.peek() !== Some(&CssToken::OpenCurly) {
+              self.t.next();
+            }
+          }
+          Selector::TypeSelector(Ident.to_string());
+        }
+        CssToken::AtKeyword(_keyword) => {
+          // @から始まるルールを無視するために宣言ブロックの開始直前までトークンを進める
+          while self.t.peek() != Some(&CssToken::OpenCurly) {
+            self.t.next();
+          }
+          Selector::UnknownSelector
+        }
+      }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
