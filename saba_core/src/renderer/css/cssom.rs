@@ -21,6 +21,7 @@ impl CssParser {
 #[derive(Debug, Clone, PartialEq)]
 // CSSOMのルートノードとなる
 pub struct StyleSheet {
+    // rulesはQualifiedRule型の可変配列型
     pub rules: Vec<QualifiedRule>,
 }
 
