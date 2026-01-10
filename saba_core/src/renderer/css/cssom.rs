@@ -2,7 +2,7 @@ use core::iter::Peekable;
 
 use alloc::{string::String, vec::Vec};
 
-use crate::renderer::css::token::CssTokenizer;
+use crate::renderer::css::token::{CssToken, CssTokenizer};
 
 #[derive(Debug, Clone)]
 pub struct CssParser {
@@ -88,3 +88,8 @@ impl Declaration {
         self.value = value;
     }
 }
+
+// プロパティの値に対するノード
+// #fffや42pxなど
+// このブラウザでは保存されたトークンのみを値として扱う
+pub type ComponentValue = CssToken;
