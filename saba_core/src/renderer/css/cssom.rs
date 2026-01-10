@@ -30,3 +30,28 @@ impl StyleSheet {
         self.rules = rules;
     }
 }
+
+// #[derive(Debug,Clone,PartialEq)]
+// ルールを表す（セレクタとその中のプロパティ、値）ノード
+pub struct QualifiedRule {
+    pub selector: Selector,
+    pub declarations: Vec<Declaration>,
+}
+
+impl QualifiedRule {
+    pub fn new() -> Self {
+        Self {
+            selector: Selector::TypeSelector("".to_string()),
+            declarations: Vec::new(),
+        }
+    }
+
+    pub fn set_selector(&mut self, selector: Selector) {
+        self.selector = selector;
+    }
+
+    pub fn set_declarations(&mut self, declarations: Vec<Declaration>) {
+        self.declarations = declarations;
+    }
+}
+
