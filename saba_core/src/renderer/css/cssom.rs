@@ -11,7 +11,7 @@ pub struct CssParser {
 
 impl CssParser {
     pub fn new(t: CssTokenizer) -> Self {
-        Self { t: peekable() }
+        Self { t: t.peekable() }
     }
 }
 
