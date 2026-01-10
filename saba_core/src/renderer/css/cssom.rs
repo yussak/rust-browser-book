@@ -136,6 +136,28 @@ impl CssParser {
         }
       }
     }
+
+    fn consume_declaration(&mut self) -> Option<Declaration> {
+      if self.t.peek().is_none() {
+        return None;
+      }
+
+      let mut declaration = Declaration::new();
+      declaration.set_perperty(self.consume_ident());
+
+      // 次のトークンがコロンでない場合、パースエラーなのでNoneを返す
+      match self.t.next() {
+        Some(token) => match token {
+          CssToken::Colon => {}
+          _=> return None,
+        }
+      }
+
+      // 値にコンポーネント値を設定
+      declaration.set_value(self.consume_component_value());
+
+      Some(declaration)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
