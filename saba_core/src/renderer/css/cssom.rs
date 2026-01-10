@@ -83,7 +83,7 @@ impl CssParser {
         CssToken::HashToken(value) => Selector::IdSelector(value[1..].to_string()),
         CssToken::Delim(delim)=> {
           if delim == '.' {
-            return Selector::ClassSelector((self.consume_ident()));
+            return Selector::ClassSelector(self.consume_ident());
           }
           panic!("Parse error: {:?} is an unexpected token.", token);
         }
@@ -103,6 +103,36 @@ impl CssParser {
             self.t.next();
           }
           Selector::UnknownSelector
+        }
+      }
+    }
+
+    fn consume_list_of_declarations(&mut self) -> Vec<Declaration> {
+      let mut declarations = Vec::new();
+
+      loop {
+        let token = match self.t.peek() {
+          Some(t) => t,
+          None => return declarations,
+        };
+        
+        match token {
+          CssToken::CloseCurly => {
+            assert_eq!(self.t.next(), Some(CssToken::CloseCurly)),
+            return declarations;
+          }
+          CssToken::SemiColon => {
+            assert_eq!(self.t.next(), Some(CssToken::SemiColon)),
+            // 一つの宣言が終了。何もしない
+          }
+          CssToken::Ident(ref_ident) => {
+            if let Some(declaration) = self.consume_declaration() {
+              declarations.push(declaration);
+            }
+          }
+          _=> {
+            self.t.next();
+          }
         }
       }
     }
