@@ -65,3 +65,26 @@ pub enum Selector {
     UnknownSelector,
 }
 
+// TODO: #[derive(Debug, Clone, PartialEq)]だが必要になったら追加してみたいので一旦コメントアウト
+// プロパティ、値のセットを表現
+pub struct Declaration {
+    pub property: String,
+    pub value: ComponentValue,
+}
+
+impl Declaration {
+    pub fn new() -> Self {
+        Self {
+            property: String::new(),
+            value: ComponentValue::Ident(String::new()),
+        }
+    }
+
+    pub fn set_property(&mut self, property: String) {
+        self.property = property;
+    }
+
+    pub fn set_value(&mut self, value: ComponentValue) {
+        self.value = value;
+    }
+}
