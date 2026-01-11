@@ -1,4 +1,8 @@
-use core::{cell::RefCell, str::FromStr};
+use core::{
+    cell::RefCell,
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use alloc::{
     format,
@@ -197,5 +201,22 @@ impl FromStr for ElementKind {
 
             _ => Err(format!("unimplemented element name {:?}", s)),
         }
+    }
+}
+
+impl Display for ElementKind {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        let s = match self {
+            ElementKind::Html => "html",
+            ElementKind::Head => "head",
+            ElementKind::Style => "style",
+            ElementKind::Script => "script",
+            ElementKind::Body => "body",
+            ElementKind::H1 => "h1",
+            ElementKind::H2 => "h2",
+            ElementKind::P => "p",
+            ElementKind::A => "a",
+        };
+        write!(f, "{}", s)
     }
 }
