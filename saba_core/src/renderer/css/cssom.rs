@@ -172,6 +172,10 @@ impl CssParser {
         }
       }
     }
+
+    fn consume_component_value(&mut self) -> ComponentValue {
+      self.t.next().expect("should have a token in consume_component_value")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
