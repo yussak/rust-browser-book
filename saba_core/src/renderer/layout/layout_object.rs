@@ -76,3 +76,38 @@ impl LayoutObject {
         self.size
     }
 }
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum LayoutObjectKind {
+    Block,
+    Inline,
+    Text,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct LayoutPoint {
+    x: i64,
+    y: i64,
+}
+
+impl LayoutPoint {
+    pub fn new(x: i64, y: i64) -> Self {
+        Self { x, y }
+    }
+
+    pub fn x(&self) -> i64 {
+        self.x
+    }
+
+    pub fn y(&self) -> i64 {
+        self.y
+    }
+
+    pub fn set_x(&mut self, x: i64) {
+        self.x = x
+    }
+
+    pub fn set_y(&mut self, y: i64) {
+        self.y = y
+    }
+}
