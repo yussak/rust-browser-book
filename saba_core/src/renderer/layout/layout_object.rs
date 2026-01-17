@@ -1,9 +1,12 @@
 use core::cell::RefCell;
 
-use alloc::rc::{Rc, Weak};
+use alloc::{
+    rc::{Rc, Weak},
+    string::ToString,
+};
 
 use crate::renderer::{
-    css::cssom::StyleSheet,
+    css::cssom::{Selector, StyleSheet},
     dom::node::{Node, NodeKind},
     layout::computed_style::ComputedStyle,
 };
@@ -78,6 +81,38 @@ impl LayoutObject {
 
     pub fn size(&self) -> LayoutSize {
         self.size
+    }
+
+    pub fn is_node_selected(&self, selector: &Selector) -> bool {
+        match &self.node_kind() {
+            NodeKind::Element(e) => match selector {
+                Selector::TypeSelector(type_name) => {
+                    if e.kind().to_string() == *type_name {
+                        return true;
+                    }
+
+                    false
+                }
+                Selector::ClassSelector(class_name) => {
+                    for attr in &e.attributes() {
+                        if attr.name() == "class" && attr.value() == *class_name {
+                            return true;
+                        }
+                    }
+                    false
+                }
+                Selector::IdSelector(id_name) => {
+                    for attr in &e.attributes() {
+                        if attr.name() == "id" && attr.value() == *id_name {
+                            return true;
+                        }
+                    }
+                    false
+                }
+                Selector::UnknownSelector => false,
+            },
+            _ => false,
+        }
     }
 }
 
