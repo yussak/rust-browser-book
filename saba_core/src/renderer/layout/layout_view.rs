@@ -4,7 +4,10 @@ use alloc::rc::Rc;
 
 use crate::renderer::{
     css::cssom::StyleSheet,
-    dom::node::{ElementKind, Node},
+    dom::{
+        api::get_target_element_node,
+        node::{ElementKind, Node},
+    },
     layout::layout_object::{create_layout_object, LayoutObject},
 };
 
