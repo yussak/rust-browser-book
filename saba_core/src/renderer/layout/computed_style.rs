@@ -14,8 +14,8 @@ pub struct ComputedStyle {
     display: Option<DisplayType>,
     font_size: Option<FontSize>,
     text_decoration: Option<TextDecoration>,
-    height: Option<i64>,
-    width: Option<i64>,
+    height: Option<f64>,
+    width: Option<f64>,
 }
 
 impl ComputedStyle {
@@ -81,21 +81,21 @@ impl ComputedStyle {
             .expect("failed to access CSS property: text_decoration")
     }
 
-    pub fn set_height(&mut self, height: i64) {
+    pub fn set_height(&mut self, height: f64) {
         self.height = Some(height)
     }
 
-    pub fn height(&self) -> i64 {
+    pub fn height(&self) -> f64 {
         self.height
             .clone()
             .expect("failed to access CSS property: height")
     }
 
-    pub fn set_width(&mut self, width: i64) {
+    pub fn set_width(&mut self, width: f64) {
         self.width = Some(width)
     }
 
-    pub fn width(&self) -> i64 {
+    pub fn width(&self) -> f64 {
         self.width
             .clone()
             .expect("failed to access CSS property: width")
