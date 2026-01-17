@@ -175,6 +175,11 @@ impl Element {
             __ => false,
         }
     }
+
+    // Copyトレイトがないのでclone()が必要
+    pub fn attributes(&self) -> Vec<Attribute> {
+        self.attributes.clone()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
