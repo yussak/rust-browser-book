@@ -3,12 +3,13 @@ use core::cell::RefCell;
 use alloc::{
     rc::{Rc, Weak},
     string::ToString,
+    vec::Vec,
 };
 
 use crate::renderer::{
-    css::cssom::{Selector, StyleSheet},
+    css::cssom::{ComponentValue, Declaration, Selector, StyleSheet},
     dom::node::{Node, NodeKind},
-    layout::computed_style::ComputedStyle,
+    layout::computed_style::{Color, ComputedStyle, DisplayType},
 };
 
 #[derive(Debug, Clone)]
@@ -112,6 +113,62 @@ impl LayoutObject {
                 Selector::UnknownSelector => false,
             },
             _ => false,
+        }
+    }
+
+    // サポートしているプロパティの値をstyleフィールドにセット
+    pub fn cascading_style(&mut self, declarations: Vec<Declaration>) {
+        for declaration in declarations {
+            match declaration.property.as_str() {
+                "background-color" => {
+                    // red, blueなど
+                    if let ComponentValue::Ident(value) = &declaration.value {
+                        let color = match Color::from_name(&value) {
+                            Ok(color) => color,
+                            Err(_) => Color::white(),
+                        };
+                        self.style.set_background_color(color);
+                        continue;
+                    }
+
+                    // #ffffff, #000000など
+                    if let ComponentValue::HashToken(color_code) = &declaration.value {
+                        let color = match Color::from_code(&color_code) {
+                            Ok(color) => color,
+                            Err(_) => Color::white(),
+                        };
+                        self.style.set_background_color(color);
+                        continue;
+                    }
+                }
+                "color" => {
+                    if let ComponentValue::Ident(value) = &declaration.value {
+                        let color = match Color::from_name(&value) {
+                            Ok(color) => color,
+                            Err(_) => Color::black(),
+                        };
+                        self.style.set_color(color);
+                    }
+
+                    if let ComponentValue::HashToken(color_code) = &declaration.value {
+                        let color = match Color::from_code(&color_code) {
+                            Ok(color) => color,
+                            Err(_) => Color::black(),
+                        };
+                        self.style.set_color(color);
+                    }
+                }
+                "display" => {
+                    if let ComponentValue::Ident(value) = declaration.value {
+                        let display_type = match DisplayType::from_str(&value) {
+                            Ok(display_type) => display_type,
+                            Err(_) => DisplayType::DisplayNone,
+                        };
+                        self.style.set_display(display_type)
+                    }
+                }
+                _ => {}
+            }
         }
     }
 }
