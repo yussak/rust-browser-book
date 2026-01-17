@@ -1,6 +1,9 @@
 use core::cell::RefCell;
 
-use alloc::{rc::Rc, string::String};
+use alloc::{
+    rc::Rc,
+    string::{String, ToString},
+};
 
 use crate::{
     error::Error,
