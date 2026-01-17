@@ -171,6 +171,14 @@ impl LayoutObject {
             }
         }
     }
+
+    pub fn defaulting_style(
+        &mut self,
+        node: &Rc<RefCell<Node>>,
+        parent_style: Option<ComputedStyle>,
+    ) {
+        self.style.defaulting(node, parent_style);
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
