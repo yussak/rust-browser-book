@@ -1,6 +1,7 @@
 use core::cell::RefCell;
 
 use alloc::{
+    format,
     rc::Rc,
     string::{String, ToString},
 };
@@ -219,7 +220,7 @@ impl Color {
             _ => {
                 return Err(Error::UnexpectedInput(format!(
                     "color code {:?} is not supported yet",
-                    name =
+                    code
                 )));
             }
         };
