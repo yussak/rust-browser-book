@@ -5,7 +5,7 @@ use alloc::rc::Rc;
 use crate::renderer::{
     css::cssom::StyleSheet,
     dom::node::{ElementKind, Node},
-    layout::layout_object::LayoutObject,
+    layout::layout_object::{create_layout_object, LayoutObject},
 };
 
 fn build_layout_tree(
