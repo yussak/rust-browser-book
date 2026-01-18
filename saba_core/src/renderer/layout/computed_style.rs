@@ -1,4 +1,4 @@
-use core::cell::RefCell;
+use core::{cell::RefCell, fmt::Display};
 
 use alloc::{
     format,
@@ -127,16 +127,19 @@ impl ComputedStyle {
 
         // 各プロパティに対して初期値を設定
         if self.background_color.is_none() {
-            self.background_color = Some(Color::white())
+            self.background_color = Some(Color::white());
         }
         if self.color.is_none() {
-            self.color = Some(Color::black())
+            self.color = Some(Color::black());
+        }
+        if self.display.is_none() {
+            self.display = Some(DisplayType::default(node));
         }
         if self.font_size.is_none() {
-            self.font_size = Some(FontSize::Medium)
+            self.font_size = Some(FontSize::default(node));
         }
         if self.text_decoration.is_none() {
-            self.text_decoration = Some(TextDecoration::None)
+            self.text_decoration = Some(TextDecoration::default(node));
         }
         if self.height.is_none() {
             self.height = Some(0.0)
