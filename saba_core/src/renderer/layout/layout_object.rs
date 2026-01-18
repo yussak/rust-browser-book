@@ -6,10 +6,13 @@ use alloc::{
     vec::Vec,
 };
 
-use crate::renderer::{
-    css::cssom::{ComponentValue, Declaration, Selector, StyleSheet},
-    dom::node::{Node, NodeKind},
-    layout::computed_style::{Color, ComputedStyle, DisplayType},
+use crate::{
+    constants::{CHAR_HEIGHT_WITH_PADDING, CHAR_WIDTH, CONTENT_AREA_WIDTH},
+    renderer::{
+        css::cssom::{ComponentValue, Declaration, Selector, StyleSheet},
+        dom::node::{Node, NodeKind},
+        layout::computed_style::{Color, ComputedStyle, DisplayType, FontSize},
+    },
 };
 
 pub fn create_layout_object(
@@ -235,6 +238,121 @@ impl LayoutObject {
             NodeKind::Text(_) => self.kind = LayoutObjectKind::Text,
         }
     }
+
+    // 1つのノードのサイズを計算
+    pub fn compute_size(&mut self, parent_size: LayoutSize) {
+        let mut size = LayoutSize::new(0, 0);
+
+        match self.kind() {
+            LayoutObjectKind::Block => {
+                size.set_width(parent_size.width());
+
+                // 全ての子ノードの高さの合計が高さになる
+                let mut height = 0;
+                let mut child = self.first_child();
+                let mut previous_child_kind = LayoutObjectKind::Block;
+                while child.is_some() {
+                    let c = match child {
+                        Some(c) => c,
+                        None => panic!("first child should exist"),
+                    };
+
+                    if previous_child_kind == LayoutObjectKind::Block
+                        || c.borrow().kind() == LayoutObjectKind::Block
+                    {
+                        height += c.borrow().size.height();
+                    }
+                    previous_child_kind = c.borrow().kind();
+                    child = c.borrow().next_sibling();
+                }
+                size.set_height(height);
+            }
+            LayoutObjectKind::Inline => {
+                let mut width = 0;
+                let mut height = 0;
+                let mut child = self.first_child();
+                while child.is_some() {
+                    let c = match child {
+                        Some(c) => c,
+                        None => panic!("first child should exist"),
+                    };
+
+                    width += c.borrow().size.width();
+                    height += c.borrow().size.height();
+
+                    child = c.borrow().next_sibling();
+                }
+
+                size.set_width(width);
+                size.set_height(height);
+            }
+            LayoutObjectKind::Text => {
+                if let NodeKind::Text(t) = self.node_kind() {
+                    let ratio = match self.style.font_size() {
+                        FontSize::Medium => 1,
+                        FontSize::XLarge => 2,
+                        FontSize::XXLarge => 3,
+                    };
+                    let width = CHAR_WIDTH * ratio * t.len() as i64;
+                    if width > CONTENT_AREA_WIDTH {
+                        size.set_width(CONTENT_AREA_WIDTH);
+                        let line_num = if width.wrapping_rem(CONTENT_AREA_WIDTH) == 0 {
+                            width.wrapping_div(CONTENT_AREA_WIDTH)
+                        } else {
+                            width.wrapping_div(CONTENT_AREA_WIDTH) + 1
+                        };
+                        size.set_height(CHAR_HEIGHT_WITH_PADDING * ratio * line_num)
+                    } else {
+                        size.set_width(width);
+                        size.set_height(CHAR_HEIGHT_WITH_PADDING * ratio);
+                    }
+                }
+            }
+        }
+        self.size = size;
+    }
+
+    // 1つのノードの位置を計算
+    pub fn compute_position(
+        &mut self,
+        parent_point: LayoutPoint,
+        previous_sibling_kind: LayoutObjectKind,
+        previous_sibling_point: Option<LayoutPoint>,
+        previous_sibling_size: Option<LayoutSize>,
+    ) {
+        let mut point = LayoutPoint::new(0, 0);
+
+        match (self.kind(), previous_sibling_kind) {
+            // このノードは新しい行から描画
+            // ブロック要素が兄弟ノードの場合Y軸方向に進む
+            (LayoutObjectKind::Block, _) | (_, LayoutObjectKind::Block) => {
+                if let (Some(size), Some(pos)) = (previous_sibling_size, previous_sibling_point) {
+                    // 兄弟ノードが存在する場合、兄弟ノードのY位置と高さの合計が次の位置になる
+                    point.set_y(pos.y() + size.height());
+                } else {
+                    // 親ノードのY座標をセット
+                    point.set_y(parent_point.y());
+                }
+                // 新しい行から始まるのでX座標は親要素のそれと同じ
+                point.set_x(parent_point.x());
+            }
+            // インライン要素が並ぶ場合、同じ行に並べて配置するためX軸方向に進む
+            (LayoutObjectKind::Inline, LayoutObjectKind::Inline) => {
+                if let (Some(size), Some(pos)) = (previous_sibling_size, previous_sibling_point) {
+                    point.set_x(pos.x() + size.width());
+                    point.set_y(pos.y());
+                } else {
+                    point.set_x(parent_point.x());
+                    point.set_y(parent_point.y());
+                }
+            }
+            // それ以外→テキストノードの場合には親ノードの位置と同じ位置に描画
+            _ => {
+                point.set_x(parent_point.x());
+                point.set_y(parent_point.y());
+            }
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -297,5 +415,11 @@ impl LayoutSize {
 
     pub fn set_height(&mut self, height: i64) {
         self.height = height
+    }
+}
+
+impl PartialEq for LayoutObject {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
     }
 }

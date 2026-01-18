@@ -2,13 +2,18 @@ use core::cell::RefCell;
 
 use alloc::rc::Rc;
 
-use crate::renderer::{
-    css::cssom::StyleSheet,
-    dom::{
-        api::get_target_element_node,
-        node::{ElementKind, Node},
+use crate::{
+    constants::CONTENT_AREA_WIDTH,
+    renderer::{
+        css::cssom::StyleSheet,
+        dom::{
+            api::get_target_element_node,
+            node::{ElementKind, Node},
+        },
+        layout::layout_object::{
+            create_layout_object, LayoutObject, LayoutObjectKind, LayoutPoint, LayoutSize,
+        },
     },
-    layout::layout_object::{create_layout_object, LayoutObject},
 };
 
 fn build_layout_tree(
@@ -128,5 +133,236 @@ impl LayoutView {
 
     pub fn root(&self) -> Option<Rc<RefCell<LayoutObject>>> {
         self.root.clone()
+    }
+
+    // 構築し終えたレイアウトツリーに対して各ノードのサイズと位置を計算
+    fn update_layout(&mut self) {
+        Self::calculate_node_size(&self.root, LayoutSize::new(CONTENT_AREA_WIDTH, 0));
+
+        Self::calculate_node_position(
+            &self.root,
+            LayoutPoint::new(0, 0),
+            None,
+            LayoutObjectKind::Block,
+            None,
+        )
+    }
+
+    // レイアウトツリーの各ノードのサイズを計算
+    fn calculate_node_size(node: &Option<Rc<RefCell<LayoutObject>>>, parent_size: LayoutSize) {
+        if let Some(n) = node {
+            // ノードがブロック要素の場合、子ノードのレイアウトを計算する前に横幅を決める
+            if n.borrow().kind() == LayoutObjectKind::Block {
+                n.borrow_mut().compute_size(parent_size);
+            }
+
+            let first_child = n.borrow().first_child();
+            Self::calculate_node_size(&first_child, n.borrow().size());
+
+            let next_sibling = n.borrow().next_sibling();
+            Self::calculate_node_size(&next_sibling, n.borrow().size());
+
+            // 子ノードのサイズが決まった後にサイズを計算する
+            // ブロック要素の時、高さは子ノードの高さに依存する
+            // インライン要素の時、高さ、横幅は子ノードに依存する
+            n.borrow_mut().compute_size(parent_size);
+        }
+    }
+
+    // レイアウトツリーのノードの位置を計算
+    fn calculate_node_position(
+        node: &Option<Rc<RefCell<LayoutObject>>>,
+        parent_point: LayoutPoint,
+        previous_sibling_point: Option<LayoutPoint>,
+        previous_sibling_kind: LayoutObjectKind,
+        previous_sibling_size: Option<LayoutSize>,
+    ) {
+        if let Some(n) = node {
+            n.borrow_mut().compute_position(
+                parent_point,
+                previous_sibling_kind,
+                previous_sibling_point,
+                previous_sibling_size,
+            );
+            // 子ノードの位置を計算
+            let first_child = n.borrow().first_child();
+            Self::calculate_node_position(
+                &first_child,
+                n.borrow().point(),
+                None,
+                LayoutObjectKind::Block,
+                None,
+            );
+
+            // 兄弟ノードの位置を計算
+            let next_sibling = n.borrow().next_sibling();
+            Self::calculate_node_position(
+                &next_sibling,
+                parent_point,
+                Some(n.borrow().point()),
+                n.borrow().kind(),
+                Some(n.borrow().size()),
+            );
+        };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::{
+        string::{String, ToString},
+        vec::Vec,
+    };
+
+    use crate::renderer::{
+        css::{cssom::CssParser, token::CssTokenizer},
+        dom::{
+            api::get_style_content,
+            node::{Element, NodeKind},
+        },
+        html::{parser::HtmlParser, token::HtmlTokenizer},
+    };
+
+    use super::*;
+
+    fn create_layout_view(html: String) -> LayoutView {
+        let t = HtmlTokenizer::new(html);
+        let window = HtmlParser::new(t).construct_tree();
+        let dom = window.borrow().document();
+        let style = get_style_content(dom.clone());
+        let css_tokenizer = CssTokenizer::new(style);
+        let cssom = CssParser::new(css_tokenizer).parse_stylesheet();
+        LayoutView::new(dom, &cssom)
+    }
+
+    #[test]
+    fn test_empty() {
+        let layout_view = create_layout_view("".to_string());
+        assert_eq!(None, layout_view.root());
+    }
+
+    #[test]
+    fn test_body() {
+        let html = "<html><head></head><body></body></html>".to_string();
+        let layout_view = create_layout_view(html);
+
+        let root = layout_view.root();
+        assert!(root.is_some());
+        assert_eq!(
+            LayoutObjectKind::Block,
+            root.clone().expect("root should exist").borrow().kind()
+        );
+        assert_eq!(
+            NodeKind::Element(Element::new("body", Vec::new())),
+            root.clone()
+                .expect("root should exist")
+                .borrow()
+                .node_kind()
+        )
+    }
+
+    #[test]
+    fn test_text() {
+        let html = "<html><head></head><body>text</body></html>".to_string();
+        let layout_view = create_layout_view(html);
+
+        let root = layout_view.root();
+        assert!(root.is_some());
+        assert_eq!(
+            LayoutObjectKind::Block,
+            root.clone().expect("root should exist").borrow().kind()
+        );
+        assert_eq!(
+            NodeKind::Element(Element::new("body", Vec::new())),
+            root.clone()
+                .expect("root should exist")
+                .borrow()
+                .node_kind()
+        );
+
+        let text = root.expect("root should exist").borrow().first_child();
+        assert!(text.is_some());
+        assert_eq!(
+            LayoutObjectKind::Text,
+            text.clone()
+                .expect("text node should exist")
+                .borrow()
+                .kind()
+        );
+        assert_eq!(
+            NodeKind::Text("text".to_string()),
+            text.clone()
+                .expect("text node should exist")
+                .borrow()
+                .node_kind()
+        );
+    }
+
+    #[test]
+    fn test_display_node() {
+        let html = "<html><head><style>body{display:none;}</style></head><body>text</body></html>"
+            .to_string();
+        let layout_view = create_layout_view(html);
+
+        assert_eq!(None, layout_view.root());
+    }
+
+    #[test]
+    fn test_hidden_class() {
+        let html = r#"<html>
+        <head>
+        <style>
+        .hidden {
+          display: noen;
+        }
+        </style>
+        </head>
+        <body>
+          <a class="hidden">link1</a>
+          <p></p>
+          <p class="hidden"><a>link2</a></p>
+        </body>
+        </html>"#
+            .to_string();
+
+        let layout_view = create_layout_view(html);
+
+        let root = layout_view.root();
+        assert!(root.is_some());
+        assert_eq!(
+            LayoutObjectKind::Block,
+            root.clone().expect("root should exist").borrow().kind()
+        );
+        assert_eq!(
+            NodeKind::Element(Element::new("body", Vec::new())),
+            root.clone()
+                .expect("root shoudl exist")
+                .borrow()
+                .node_kind()
+        );
+
+        let p = root.expect("root should exist").borrow().first_child();
+        assert!(p.is_some());
+        assert_eq!(
+            LayoutObjectKind::Block,
+            p.clone().expect("p node should exist").borrow().kind()
+        );
+        assert_eq!(
+            NodeKind::Element(Element::new("p", Vec::new())),
+            p.clone().expect("p node should exist").borrow().node_kind()
+        );
+
+        assert!(p
+            .clone()
+            .expect("p node should exist")
+            .borrow()
+            .first_child()
+            .is_none());
+
+        assert!(p
+            .expect("p node should exist")
+            .borrow()
+            .next_sibling()
+            .is_none());
     }
 }

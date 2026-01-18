@@ -1,6 +1,10 @@
 use core::cell::RefCell;
 
-use alloc::{rc::Rc, string::ToString, vec::Vec};
+use alloc::{
+    rc::Rc,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use crate::renderer::dom::node::{Element, ElementKind, Node, NodeKind};
 
@@ -29,4 +33,21 @@ pub fn get_target_element_node(
         }
         None => None,
     }
+}
+
+// styleタグのコンテンツを取得
+pub fn get_style_content(root: Rc<RefCell<Node>>) -> String {
+    let style_node = match get_target_element_node(Some(root), ElementKind::Style) {
+        Some(node) => node,
+        None => return "".to_string(),
+    };
+    let text_node = match style_node.borrow().first_child() {
+        Some(node) => node,
+        None => return "".to_string(),
+    };
+    let content = match &text_node.borrow().kind() {
+        NodeKind::Text(ref s) => s.clone(),
+        _ => "".to_string(),
+    };
+    content
 }
