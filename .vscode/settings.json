@@ -1,4 +1,0 @@
-{
-  // 外部クレート（prelude.rsなど)のエラーを消す
-  "rust-analyzer.check.workspace": false
-}
