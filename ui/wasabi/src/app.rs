@@ -1,10 +1,16 @@
 use alloc::fmt::format;
+use alloc::format;
 use alloc::rc::Rc;
+use alloc::string::ToString;
 use core::cell::RefCell;
 use noli::error::Result as OsResult;
-use noli::window::Window;
+use noli::window::{StringSize, Window};
 use saba_core::browser::Browser;
-use saba_core::constants::ADDRESSBAR_HEIGHT;
+use saba_core::constants::{
+    ADDRESSBAR_HEIGHT, BLACK, DARKGREY, GREY, LIGHTGREY, TOOLBAR_HEIGHT, WHITE, WINDOW_HEIGHT,
+    WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS, WINDOW_WIDTH,
+};
+use saba_core::error::Error;
 
 #[derive(Debug)]
 pub struct WasabiUI {
@@ -31,7 +37,7 @@ impl WasabiUI {
     fn setup_toolbar(&mut self) -> OsResult<()> {
         // ツールバーの背景の視覚を描画
         self.window
-            .fill_rect(LIGHTGRAY, 0, 0, WINDOW_WIDTH, TOOLBAR_HEIGHT)?;
+            .fill_rect(LIGHTGREY, 0, 0, WINDOW_WIDTH, TOOLBAR_HEIGHT)?;
 
         // ツールバーとコンテンツエリアの境目の線を描画
         self.window
@@ -60,7 +66,8 @@ impl WasabiUI {
 
         // アドレスバーの影の線を描画
         self.window.draw_line(GREY, 70, 2, WINDOW_WIDTH - 4, 2)?;
-        selfwindow.draw_line(GREY, 70, 2, 70, 2 + ADDRESSBAR_HEIGHT)?;
+        self.window
+            .draw_line(GREY, 70, 2, 70, 2 + ADDRESSBAR_HEIGHT)?;
         self.window.draw_line(BLACK, 71, 3, WINDOW_WIDTH - 5, 3)?;
 
         self.window

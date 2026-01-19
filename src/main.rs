@@ -3,9 +3,13 @@
 
 extern crate alloc;
 
+use core::cell::RefCell;
+
 use crate::alloc::string::ToString;
+use alloc::rc::Rc;
 use noli::prelude::*;
 use saba_core::{browser::Browser, http::HttpResponse};
+use ui_wasabi::app::WasabiUI;
 
 static TEST_HTTP_RESPONSE: &str = r#"HTTP/1.1 200 OK
 Data: xx xx xx
