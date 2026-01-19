@@ -15,6 +15,12 @@ pub static CHAR_HEIGHT: i64 = 16;
 pub static CHAR_HEIGHT_WITH_PADDING: i64 = CHAR_HEIGHT + 4;
 
 pub static WHITE: u32 = 0xffffff;
+pub static LIGTHGRAY: u32 = 0xd3d3d3;
+pub static GRAY: u32 = 0x808080;
+pub static DARKGRAY: u32 = 0x5a5a5a;
+pub static BLACK: u32 = 0x000000;
 
 pub static WINDOW_INIT_X_POS: i64 = 30;
 pub static WINDOW_INIT_Y_POS: i64 = 50;
+
+pub static ADDRESSBAR_HEIGHT: i64 = 20;
