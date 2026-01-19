@@ -13,3 +13,8 @@ pub static CONTENT_AREA_HEIGHT: i64 = TITLE_BAR_HEIGHT - WINDOW_PADDING * 2;
 pub static CHAR_WIDTH: i64 = 8;
 pub static CHAR_HEIGHT: i64 = 16;
 pub static CHAR_HEIGHT_WITH_PADDING: i64 = CHAR_HEIGHT + 4;
+
+pub static WHITE: u32 = 0xffffff;
+
+pub static WINDOW_INIT_X_POS: i64 = 30;
+pub static WINDOW_INIT_Y_POS: i64 = 50;
