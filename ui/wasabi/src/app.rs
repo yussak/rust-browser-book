@@ -1,4 +1,3 @@
-use alloc::fmt::format;
 use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::ToString;
