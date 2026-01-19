@@ -11,22 +11,8 @@ use noli::prelude::*;
 use saba_core::{browser::Browser, http::HttpResponse};
 use ui_wasabi::app::WasabiUI;
 
-// static TEST_HTTP_RESPONSE: &str = r#"HTTP/1.1 200 OK
-// Data: xx xx xx
-
-// <html>
-// <head></head>
-// <body>
-//   <h1 id="title">H1 title</h1>
-//   <h2 class="class">H2 title</h2>
-//   <p>Test text.</p>
-//   <p>
-//     <a href="example.com">Link1</a>
-//     <a href="example.com">Link2</a>
-//   </p>
-// </body>
-// </html>
-// "#;
+// MEMO:ブラウザ画面を起動するコマンド
+// rust-browser-book % DISPLAY=1 ./run_on_wasabi.sh
 
 fn main() -> u64 {
     let browser = Browser::new();
