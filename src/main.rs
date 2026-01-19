@@ -26,11 +26,15 @@ Data: xx xx xx
 
 fn main() -> u64 {
     let browser = Browser::new();
-    let response =
-        HttpResponse::new(TEST_HTTP_RESPONSE.to_string()).expect("failed to parser http response");
-    let page = browser.borrow().current_page();
-    page.borrow_mut().receive_response(response);
+    let ui = Rc::new(RefCell::new(WasabiUI::new(browser)));
 
+    match ui.borrow_mut().start() {
+        Ok(_) => {}
+        Err(e) => {
+            println!("browser fails to start {:?}", e);
+            return 1;
+        }
+    };
     0
 }
 
