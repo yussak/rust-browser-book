@@ -15,12 +15,15 @@ use saba_core::constants::{
 };
 use saba_core::error::Error;
 
+use crate::cursor::Cursor;
+
 #[derive(Debug)]
 pub struct WasabiUI {
     browser: Rc<RefCell<Browser>>,
     window: Window,
     input_mode: InputMode,
     input_url: String,
+    cursor: Cursor,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,6 +48,7 @@ impl WasabiUI {
             .unwrap(),
             input_mode: InputMode::Normal,
             input_url: String::new(),
+            cursor: Cursor::new(),
         }
     }
 
