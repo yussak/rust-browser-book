@@ -1,6 +1,6 @@
 use alloc::format;
 use alloc::rc::Rc;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use core::cell::RefCell;
 use noli::error::Result as OsResult;
 use noli::prelude::{MouseEvent, SystemApi};
@@ -18,6 +18,15 @@ use saba_core::error::Error;
 pub struct WasabiUI {
     browser: Rc<RefCell<Browser>>,
     window: Window,
+    input_mode: InputMode,
+    input_url: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+// アプリが文字入力できる状態か
+enum InputMode {
+    Normal,  //文字入力できない
+    Editing, // 文字入力できる
 }
 
 impl WasabiUI {
@@ -33,6 +42,8 @@ impl WasabiUI {
                 WINDOW_HEIGHT,
             )
             .unwrap(),
+            input_mode: InputMode::Normal,
+            input_url: String::new(),
         }
     }
 
@@ -119,8 +130,21 @@ impl WasabiUI {
     }
 
     fn handle_key_input(&mut self) -> Result<(), Error> {
-        if let Some(c) = Api::read_key() {
-            println!("input text: {:?}", c);
+        match self.input_mode {
+            InputMode::Normal => {
+                // キー入力を無視
+                let _ = Api::read_key();
+            }
+            InputMode::Editing => {
+                if let Some(c) = Api::read_key() {
+                    if c == 0x7F as char || c == 0x08 as char {
+                        // DeleteキーまたはBackspaceキーが押されたので最後の文字を削除
+                        self.input_url.pop();
+                    } else {
+                        self.input_url.push(c);
+                    }
+                }
+            }
         }
 
         Ok(())
