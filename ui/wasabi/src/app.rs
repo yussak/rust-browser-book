@@ -5,12 +5,13 @@ use core::cell::RefCell;
 use noli::error::Result as OsResult;
 use noli::prelude::{MouseEvent, SystemApi};
 use noli::println;
+use noli::rect::Rect;
 use noli::sys::wasabi::Api;
 use noli::window::{StringSize, Window};
 use saba_core::browser::Browser;
 use saba_core::constants::{
-    ADDRESSBAR_HEIGHT, BLACK, DARKGREY, GREY, LIGHTGREY, TOOLBAR_HEIGHT, WHITE, WINDOW_HEIGHT,
-    WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS, WINDOW_WIDTH,
+    ADDRESSBAR_HEIGHT, BLACK, DARKGREY, GREY, LIGHTGREY, TITLE_BAR_HEIGHT, TOOLBAR_HEIGHT, WHITE,
+    WINDOW_HEIGHT, WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS, WINDOW_WIDTH,
 };
 use saba_core::error::Error;
 
@@ -146,6 +147,43 @@ impl WasabiUI {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    fn update_address_bar(&mut self) -> Result<(), Error> {
+        // アドレスバーを白く塗る
+        if self
+            .window
+            .fill_rect(WHITE, 72, 4, WINDOW_WIDTH - 76, ADDRESSBAR_HEIGHT - 2)
+            .is_err()
+        {
+            return Err(Error::InvalidUI(
+                "failed to clear an address bar".to_string(),
+            ));
+        }
+
+        // input_urlをアドレスバーに描画
+        if self
+            .window
+            .draw_string(BLACK, 74, 6, &self.input_url, StringSize::Medium, false)
+            .is_err()
+        {
+            return Err(Error::InvalidUI(
+                "failed to update an address bar".to_string(),
+            ));
+        }
+
+        // アドレスバーの部分の画面を更新する
+        self.window.flush_area(
+            Rect::new(
+                WINDOW_INIT_X_POS,
+                WINDOW_INIT_Y_POS + TITLE_BAR_HEIGHT,
+                WINDOW_WIDTH,
+                TOOLBAR_HEIGHT,
+            )
+            .expect("failed to create a rect for the address bar"),
+        );
 
         Ok(())
     }
