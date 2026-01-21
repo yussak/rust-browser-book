@@ -1,4 +1,4 @@
-use noli::{rect::Rect, sheet::Sheet};
+use noli::{bitmap::bitmap_draw_rect, rect::Rect, sheet::Sheet};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Cursor {
