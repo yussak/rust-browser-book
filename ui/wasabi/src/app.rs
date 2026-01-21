@@ -121,9 +121,34 @@ impl WasabiUI {
 
     fn handle_mouse_input(&mut self) -> Result<(), Error> {
         if let Some(MouseEvent { button, position }) = Api::get_mouse_cursor_info() {
-            println!("mouse position {:?}", position);
             if button.l() || button.c() || button.r() {
-                println!("mouse clicked {:?}", button);
+                // 相対位置を計算
+                let relative_pos = (
+                    position.x - WINDOW_INIT_X_POS,
+                    position.y - WINDOW_INIT_Y_POS,
+                );
+
+                // ウィンドウの外をクリックされたときは何もしない
+                if relative_pos.0 < 0
+                    || relative_pos.0 > WINDOW_WIDTH
+                    || relative_pos.1 < 0
+                    || relative_pos.1 > WINDOW_HEIGHT
+                {
+                    println!("button clicked OUTSIDE window: {button:?} {position:?}");
+                    return Ok(());
+                }
+
+                // ツールバーの範囲をクリックされた時、InputModeをEditingに変更
+                if relative_pos.1 < TOOLBAR_HEIGHT + TITLE_BAR_HEIGHT
+                    && relative_pos.1 >= TITLE_BAR_HEIGHT
+                {
+                    self.clear_address_bar()?;
+                    self.input_url = String::new();
+                    self.input_mode = InputMode::Editing;
+                    println!("button clicked in toolbar: {button:?} {position:?}");
+                }
+
+                self.input_mode = InputMode::Normal;
             }
         }
 
