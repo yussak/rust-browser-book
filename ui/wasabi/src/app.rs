@@ -155,6 +155,7 @@ impl WasabiUI {
                     self.input_url = String::new();
                     self.input_mode = InputMode::Editing;
                     println!("button clicked in toolbar: {button:?} {position:?}");
+                    return Ok(());
                 }
 
                 self.input_mode = InputMode::Normal;
