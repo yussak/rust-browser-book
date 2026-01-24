@@ -14,6 +14,7 @@ use saba_core::constants::{
     WINDOW_HEIGHT, WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS, WINDOW_WIDTH,
 };
 use saba_core::error::Error;
+use saba_core::http::HttpResponse;
 
 use crate::cursor::Cursor;
 
@@ -165,7 +166,10 @@ impl WasabiUI {
         Ok(())
     }
 
-    fn handle_key_input(&mut self) -> Result<(), Error> {
+    fn handle_key_input(
+        &mut self,
+        handle_url: fn(String) -> Result<HttpResponse, Error>,
+    ) -> Result<(), Error> {
         match self.input_mode {
             InputMode::Normal => {
                 // キー入力を無視
@@ -173,7 +177,14 @@ impl WasabiUI {
             }
             InputMode::Editing => {
                 if let Some(c) = Api::read_key() {
-                    if c == 0x7F as char || c == 0x08 as char {
+                    if c == 0x0A as char {
+                        // EnterキーはASCIIコードで0x0Aで表す
+                        // Enterキーが押されたのでナビゲーションを開始
+                        self.start_navigation(handle_url, self.input_url.clone())?;
+
+                        self.input_url = String::new();
+                        self.input_mode = InputMode::Normal;
+                    } else if c == 0x7F as char || c == 0x08 as char {
                         // DeleteキーまたはBackspaceキーが押されたので最後の文字を削除
                         self.input_url.pop();
                         self.update_address_bar()?;
@@ -245,6 +256,26 @@ impl WasabiUI {
             )
             .expect("failed to create a rect for the address bar"),
         );
+
+        Ok(())
+    }
+
+    fn start_navigation(
+        &mut self,
+        handle_url: fn(String) -> Result<HttpResponse, Error>,
+        destination: String,
+    ) -> Result<(), Error> {
+        self.clear_content_area()?;
+
+        match handle_url(destination) {
+            Ok(response) => {
+                let page = self.browser.borrow().current_page();
+                page.borrow_mut().receive_response(response);
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
 
         Ok(())
     }
