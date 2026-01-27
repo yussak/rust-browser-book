@@ -10,8 +10,9 @@ use noli::sys::wasabi::Api;
 use noli::window::{StringSize, Window};
 use saba_core::browser::Browser;
 use saba_core::constants::{
-    ADDRESSBAR_HEIGHT, BLACK, DARKGREY, GREY, LIGHTGREY, TITLE_BAR_HEIGHT, TOOLBAR_HEIGHT, WHITE,
-    WINDOW_HEIGHT, WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS, WINDOW_WIDTH,
+    ADDRESSBAR_HEIGHT, BLACK, CONTENT_AREA_HEIGHT, CONTENT_AREA_WIDTH, DARKGREY, GREY, LIGHTGREY,
+    TITLE_BAR_HEIGHT, TOOLBAR_HEIGHT, WHITE, WINDOW_HEIGHT, WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS,
+    WINDOW_WIDTH,
 };
 use saba_core::error::Error;
 use saba_core::http::HttpResponse;
@@ -276,6 +277,29 @@ impl WasabiUI {
                 return Err(e);
             }
         }
+
+        Ok(())
+    }
+
+    fn clear_content_area(&mut self) -> Result<(), Error> {
+        // コンテンツエリアを白く塗りつぶす
+        if self
+            .window
+            .fill_rect(
+                WHITE,
+                0,
+                TOOLBAR_HEIGHT + 2,
+                CONTENT_AREA_WIDTH,
+                CONTENT_AREA_HEIGHT - 2,
+            )
+            .is_err()
+        {
+            return Err(Error::InvalidUI(
+                "failed to clear a content area".to_string(),
+            ));
+        }
+
+        self.window.flush();
 
         Ok(())
     }
