@@ -363,9 +363,6 @@ impl WasabiUI {
                         return Err(Error::InvalidUI("failed to draw a string".to_string()));
                     }
                 }
-                _ => {
-                    // 他の要素の描画
-                }
             }
         }
 
