@@ -6,10 +6,10 @@ extern crate alloc;
 use core::cell::RefCell;
 
 use crate::alloc::string::ToString;
-use alloc::{rc::Rc, string::String};
+use alloc::{format, rc::Rc, string::String};
 use net_wasabi::http::HttpClient;
-use noli::prelude::*;
-use saba_core::{browser::Browser, http::HttpResponse, url::Url};
+use noli::*;
+use saba_core::{browser::Browser, error::Error, http::HttpResponse, url::Url};
 use ui_wasabi::app::WasabiUI;
 
 // MEMO:ブラウザ画面を起動するコマンド
@@ -19,7 +19,7 @@ fn main() -> u64 {
     let browser = Browser::new();
     let ui = Rc::new(RefCell::new(WasabiUI::new(browser)));
 
-    match ui.borrow_mut().start() {
+    match ui.borrow_mut().start(handle_url) {
         Ok(_) => {}
         Err(e) => {
             println!("browser fails to start {:?}", e);
@@ -45,7 +45,7 @@ fn handle_url(url: String) -> Result<HttpResponse, Error> {
 
     // HTTPリクエストを送信する
     let client = HttpClient::new();
-    let resopnse = match client.get(
+    let response = match client.get(
         parsed_url.host(),
         parsed_url.port().parse::<u16>().expect(&format!(
             "port number should be u16 but got {}",
@@ -63,7 +63,7 @@ fn handle_url(url: String) -> Result<HttpResponse, Error> {
                 let redirect_parsed_url = Url::new(location);
 
                 let redirect_res = match client.get(
-                    redirectd_parsed_url.host(),
+                    redirect_parsed_url.host(),
                     redirect_parsed_url.port().parse::<u16>().expect(&format!(
                         "port number should be u16 but got {}",
                         parsed_url.port()

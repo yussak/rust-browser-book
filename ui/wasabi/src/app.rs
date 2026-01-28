@@ -110,18 +110,24 @@ impl WasabiUI {
         Ok(())
     }
 
-    pub fn start(&mut self) -> Result<(), Error> {
+    pub fn start(
+        &mut self,
+        handle_url: fn(String) -> Result<HttpResponse, Error>,
+    ) -> Result<(), Error> {
         self.setup()?;
 
-        self.run_app()?;
+        self.run_app(handle_url)?;
 
         Ok(())
     }
 
-    fn run_app(&mut self) -> Result<(), Error> {
+    fn run_app(
+        &mut self,
+        handle_url: fn(String) -> Result<HttpResponse, Error>,
+    ) -> Result<(), Error> {
         loop {
             self.handle_mouse_input()?;
-            self.handle_key_input()?;
+            self.handle_key_input(handle_url)?;
         }
     }
 
