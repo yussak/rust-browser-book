@@ -12,10 +12,11 @@ use saba_core::browser::Browser;
 use saba_core::constants::{
     ADDRESSBAR_HEIGHT, BLACK, CONTENT_AREA_HEIGHT, CONTENT_AREA_WIDTH, DARKGREY, GREY, LIGHTGREY,
     TITLE_BAR_HEIGHT, TOOLBAR_HEIGHT, WHITE, WINDOW_HEIGHT, WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS,
-    WINDOW_WIDTH,
+    WINDOW_PADDING, WINDOW_WIDTH,
 };
 use saba_core::error::Error;
 use saba_core::http::HttpResponse;
+use saba_core::renderer::layout::computed_style::FontSize;
 
 use crate::cursor::Cursor;
 
@@ -321,9 +322,43 @@ impl WasabiUI {
             .display_items();
 
         for item in display_items {
-            println!("{:?}", item);
+            match item {
+                DipslayItem::Text {
+                    text,
+                    style,
+                    layout_point,
+                } => {
+                    if self
+                        .window
+                        .draw_string(
+                            style.color().code_u32(),
+                            layout_point.x() + WINDOW_PADDING,
+                            layout_point.y() + WINDOW_PADDING + TOOLBAR_HEIGTH,
+                            &text,
+                            convert_font_size(style.font_size()),
+                            false,
+                        )
+                        .is_err()
+                    {
+                        return Err(Error::InvalidUI("failed to draw a string".to_string()));
+                    }
+                }
+                _ => {
+                    // 他の要素の描画
+                }
+            }
         }
 
+        self.window.flush();
+
         Ok(())
+    }
+}
+
+fn convert_font_size(size: FontSize) -> StringSize {
+    match size {
+        FontSize::Medium => StringSize::Medium,
+        FontSize::XLarge => StringSize::Large,
+        FontSize::XXLarge => StringSize::XLarge,
     }
 }
