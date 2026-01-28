@@ -284,6 +284,8 @@ impl WasabiUI {
             }
         }
 
+        self.update_ui()?;
+
         Ok(())
     }
 
@@ -306,6 +308,21 @@ impl WasabiUI {
         }
 
         self.window.flush();
+
+        Ok(())
+    }
+
+    fn update_ui(&mut self) -> Result<(), Error> {
+        let display_items = self
+            .browser
+            .borrow()
+            .current_page()
+            .borrow()
+            .display_items();
+
+        for item in display_items {
+            println!("{:?}", item);
+        }
 
         Ok(())
     }
