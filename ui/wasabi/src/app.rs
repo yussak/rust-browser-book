@@ -14,6 +14,7 @@ use saba_core::constants::{
     TITLE_BAR_HEIGHT, TOOLBAR_HEIGHT, WHITE, WINDOW_HEIGHT, WINDOW_INIT_X_POS, WINDOW_INIT_Y_POS,
     WINDOW_PADDING, WINDOW_WIDTH,
 };
+use saba_core::display_item::DisplayItem;
 use saba_core::error::Error;
 use saba_core::http::HttpResponse;
 use saba_core::renderer::layout::computed_style::FontSize;
@@ -323,7 +324,7 @@ impl WasabiUI {
 
         for item in display_items {
             match item {
-                DipslayItem::Text {
+                DisplayItem::Text {
                     text,
                     style,
                     layout_point,
@@ -333,7 +334,7 @@ impl WasabiUI {
                         .draw_string(
                             style.color().code_u32(),
                             layout_point.x() + WINDOW_PADDING,
-                            layout_point.y() + WINDOW_PADDING + TOOLBAR_HEIGTH,
+                            layout_point.y() + WINDOW_PADDING + TOOLBAR_HEIGHT,
                             &text,
                             convert_font_size(style.font_size()),
                             false,
