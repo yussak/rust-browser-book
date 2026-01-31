@@ -161,7 +161,7 @@ impl LayoutView {
             Self::calculate_node_size(&first_child, n.borrow().size());
 
             let next_sibling = n.borrow().next_sibling();
-            Self::calculate_node_size(&next_sibling, n.borrow().size());
+            Self::calculate_node_size(&next_sibling, parent_size);
 
             // 子ノードのサイズが決まった後にサイズを計算する
             // ブロック要素の時、高さは子ノードの高さに依存する

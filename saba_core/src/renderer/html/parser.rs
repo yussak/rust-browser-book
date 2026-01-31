@@ -206,7 +206,7 @@ impl HtmlParser {
                             continue;
                         }
 
-                        "h1|h2" => {
+                        "h1" | "h2" => {
                             self.insert_element(tag, attributes.to_vec());
                             token = self.t.next();
                             continue;
@@ -252,7 +252,7 @@ impl HtmlParser {
                             continue;
                         }
 
-                        "h1|h2" => {
+                        "h1" | "h2" => {
                             let element_kind = ElementKind::from_str(tag)
                                 .expect("failed to convert string to ElementKind");
                             token = self.t.next();

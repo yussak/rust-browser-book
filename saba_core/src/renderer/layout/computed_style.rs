@@ -65,13 +65,8 @@ impl ComputedStyle {
             .expect("failed to access CSS property: display")
     }
 
-    pub fn set_font_size(&mut self, font_size: FontSize) {
-        self.font_size = Some(font_size)
-    }
-
     pub fn font_size(&self) -> FontSize {
         self.font_size
-            .clone()
             .expect("failed to access CSS property: font_size")
     }
 
@@ -91,7 +86,7 @@ impl ComputedStyle {
 
     pub fn height(&self) -> f64 {
         self.height
-            .clone()
+            // .clone()
             .expect("failed to access CSS property: height")
     }
 
@@ -101,7 +96,7 @@ impl ComputedStyle {
 
     pub fn width(&self) -> f64 {
         self.width
-            .clone()
+            // .clone()
             .expect("failed to access CSS property: width")
     }
 
