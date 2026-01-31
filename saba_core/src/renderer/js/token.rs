@@ -3,7 +3,7 @@ use alloc::{
     vec::Vec,
 };
 
-static RESERVED_WORDS: [&str; 1] = ["var"];
+static RESERVED_WORDS: [&str; 3] = ["var", "function", "return"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
