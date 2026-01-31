@@ -145,9 +145,6 @@ impl Sub<RuntimeValue> for RuntimeValue {
     type Output = RuntimeValue;
 
     fn sub(self, rhs: RuntimeValue) -> RuntimeValue {
-        // let (RuntimeValue::Number(left_num), RuntimeValue::Number(right_num)) = (&self, &rhs);
-        // return RuntimeValue::Number(left_num - right_num);
-
         if let (RuntimeValue::Number(left_num), RuntimeValue::Number(right_num)) = (&self, &rhs) {
             return RuntimeValue::Number(left_num - right_num);
         }
