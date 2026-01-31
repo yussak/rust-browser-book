@@ -66,6 +66,9 @@ impl JsRuntime {
                 None
             }
             Node::NumericLiteral(value) => Some(RuntimeValue::Number(*value)),
+
+            // TODO: 後で対応
+            _ => todo!(),
         }
     }
 }
