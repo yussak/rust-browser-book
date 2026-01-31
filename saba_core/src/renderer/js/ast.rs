@@ -31,6 +31,25 @@ pub enum Node {
     },
     Identifier(String),
     StringLiteral(String),
+    // {}で囲まれるブロックを表す
+    BlockStatement {
+        body: Vec<Option<Rc<Node>>>,
+    },
+    // returnの予約語から始まる文を表す
+    ReturnStatement {
+        argument: Option<Rc<Node>>,
+    },
+    // functionの予約語から始まる文を表す
+    FunctionDeclaration {
+        id: Option<Rc<Node>>,
+        params: Vec<Option<Rc<Node>>>,
+        body: Option<Rc<Node>>,
+    },
+    // 関数呼び出しを表す
+    CallExpression {
+        callee: Option<Rc<Node>>,
+        arguments: Vec<Option<Rc<Node>>>,
+    },
 }
 
 impl Node {
@@ -90,6 +109,29 @@ impl Node {
 
     pub fn new_string_literal(value: String) -> Option<Rc<Self>> {
         Some(Rc::new(Node::StringLiteral(value)))
+    }
+
+    pub fn new_block_statement(body: Vec<Option<Rc<Self>>>) -> Option<Rc<Self>> {
+        Some(Rc::new(Node::BlockStatement { body }))
+    }
+
+    pub fn new_return_statement(argument: Option<Rc<Self>>) -> Option<Rc<Self>> {
+        Some(Rc::new(Node::ReturnStatement { argument }))
+    }
+
+    pub fn new_function_declaration(
+        id: Option<Rc<Self>>,
+        params: Vec<Option<Rc<Self>>>,
+        body: Option<Rc<Self>>,
+    ) -> Option<Rc<Self>> {
+        Some(Rc::new(Node::FunctionDeclaration { id, params, body }))
+    }
+
+    pub fn new_call_expression(
+        callee: Option<Rc<Self>>,
+        arguments: Vec<Option<Rc<Self>>>,
+    ) -> Option<Rc<Self>> {
+        Some(Rc::new(Node::CallExpression { callee, arguments }))
     }
 }
 
