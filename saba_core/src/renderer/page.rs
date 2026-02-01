@@ -1,11 +1,6 @@
 use core::cell::RefCell;
 
-use alloc::{
-    rc::{Rc, Weak},
-    string::String,
-    vec::Vec,
-};
-
+use crate::renderer::dom::api::get_js_content;
 use crate::{
     browser::Browser,
     display_item::DisplayItem,
@@ -19,8 +14,14 @@ use crate::{
             api::get_style_content,
             node::{ElementKind, NodeKind},
         },
+        js::{ast::JsParser, runtime::JsRuntime, token::JsLexer},
         layout::layout_view::LayoutView,
     },
+};
+use alloc::{
+    rc::{Rc, Weak},
+    string::String,
+    vec::Vec,
 };
 
 use super::{
@@ -54,6 +55,8 @@ impl Page {
 
     pub fn receive_response(&mut self, response: HttpResponse) {
         self.create_frame(response.body());
+
+        self.execute_js();
 
         self.set_layout_view();
         self.paint_tree();
@@ -119,5 +122,21 @@ impl Page {
         }
 
         None
+    }
+
+    fn execute_js(&mut self) {
+        let dom = match &self.frame {
+            Some(frame) => frame.borrow().document(),
+            None => return,
+        };
+
+        let js = get_js_content(dom.clone());
+        let lexer = JsLexer::new(js);
+
+        let mut parser = JsParser::new(lexer);
+        let ast = parser.parse_ast();
+
+        let mut runtime = JsRuntime::new(dom);
+        runtime.execute(&ast);
     }
 }
