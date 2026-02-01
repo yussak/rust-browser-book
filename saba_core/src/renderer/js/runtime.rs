@@ -18,12 +18,14 @@ use core::borrow::Borrow;
 #[derive(Debug, Clone)]
 pub struct JsRuntime {
     env: Rc<RefCell<Environment>>,
+    functions: Vec<Function>,
 }
 
 impl JsRuntime {
     pub fn new() -> Self {
         Self {
             env: Rc::new(RefCell::new(Environment::new(None))),
+            functions: Vec::new(),
         }
     }
 
@@ -118,12 +120,70 @@ impl JsRuntime {
                 }
             }
             Node::StringLiteral(value) => Some(RuntimeValue::StringLiteral(value.to_string())),
+            Node::BlockStatement { body } => {
+                let mut result: Option<RuntimeValue> = None;
+                for stmt in body {
+                    result = self.eval(&stmt, env.clone());
+                }
+
+                result
+            }
+            Node::ReturnStatement { argument } => return self.eval(&argument, env.clone()),
+            Node::FunctionDeclaration { id, params, body } => {
+                if let Some(RuntimeValue::StringLiteral(id)) = self.eval(&id, env.clone()) {
+                    let cloned_body = match body {
+                        Some(b) => Some(b.clone()),
+                        None => None,
+                    };
+                    self.functions
+                        .push(Function::new(id, params.to_vec(), cloned_body));
+                };
+                None
+            }
+            Node::CallExpression { callee, arguments } => {
+                let new_env = Rc::new(RefCell::new(Environment::new(Some(env))));
+
+                let callee_value = match self.eval(callee, new_env.clone()) {
+                    Some(value) => value,
+                    None => return None,
+                };
+
+                // すでに定義されている関数を探す
+                let function = {
+                    let mut f: Option<Function> = None;
+                    for func in &self.functions {
+                        if callee_value == RuntimeValue::StringLiteral(func.id.to_string()) {
+                            f = Some(func.clone());
+                        }
+                    }
+
+                    match f {
+                        Some(f) => f,
+                        None => panic!("function {:?} doesn't exist", callee),
+                    }
+                };
+
+                // 関数呼び出し時に渡される引数を新しく作成したスコープのローカル変数として割り当てる
+                assert!(arguments.len() == function.params.len());
+                for (i, item) in arguments.iter().enumerate() {
+                    if let Some(RuntimeValue::StringLiteral(name)) =
+                        self.eval(&function.params[i], new_env.clone())
+                    {
+                        new_env
+                            .borrow_mut()
+                            .add_variable(name, self.eval(item, new_env.clone()));
+                    }
+                }
+
+                // 関数を新しいスコープと共に呼ぶ
+                self.eval(&function.body.clone(), new_env.clone())
+            }
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
 // JSランタイムで扱う値
+#[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeValue {
     Number(u64),
     StringLiteral(String),
@@ -208,6 +268,19 @@ impl Display for RuntimeValue {
             RuntimeValue::StringLiteral(value) => value.to_string(),
         };
         write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Function {
+    id: String,
+    params: Vec<Option<Rc<Node>>>,
+    body: Option<Rc<Node>>,
+}
+
+impl Function {
+    fn new(id: String, params: Vec<Option<Rc<Node>>>, body: Option<Rc<Node>>) -> Self {
+        Self { id, params, body }
     }
 }
 
@@ -312,6 +385,40 @@ mod tests {
         let ast = parser.parse_ast();
         let mut runtime = JsRuntime::new();
         let expected = [None, None, Some(RuntimeValue::Number(1))];
+        let mut i = 0;
+
+        for node in ast.body() {
+            let result = runtime.eval(&Some(node.clone()), runtime.env.clone());
+            assert_eq!(expected[i], result);
+            i += 1;
+        }
+    }
+
+    #[test]
+    fn test_add_function_and_num() {
+        let input = "function foo() { return 42; } foo()+1".to_string();
+        let lexer = JsLexer::new(input);
+        let mut parser = JsParser::new(lexer);
+        let ast = parser.parse_ast();
+        let mut runtime = JsRuntime::new();
+        let expected = [None, Some(RuntimeValue::Number(43))];
+        let mut i = 0;
+
+        for node in ast.body() {
+            let result = runtime.eval(&Some(node.clone()), runtime.env.clone());
+            assert_eq!(expected[i], result);
+            i += 1;
+        }
+    }
+
+    #[test]
+    fn test_local_variable() {
+        let input = "var a=42; function foo() { var a=1; return a; } foo()+a".to_string();
+        let lexer = JsLexer::new(input);
+        let mut parser = JsParser::new(lexer);
+        let ast = parser.parse_ast();
+        let mut runtime = JsRuntime::new();
+        let expected = [None, None, Some(RuntimeValue::Number(43))];
         let mut i = 0;
 
         for node in ast.body() {
