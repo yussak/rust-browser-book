@@ -1,17 +1,17 @@
-use core::{
-    cell::RefCell,
-    fmt::{Display, Formatter},
-    ops::{Add, Sub},
-};
-
+use crate::renderer::dom::node::NodeKind as DomNodeKind;
+use crate::renderer::dom::{api::get_element_by_id, node::Node as DomNode};
+use crate::renderer::js::ast::{Node, Program};
 use alloc::{
     format,
     rc::Rc,
     string::{String, ToString},
     vec::Vec,
 };
-
-use crate::renderer::js::ast::{Node, Program};
+use core::{
+    cell::RefCell,
+    fmt::{Display, Formatter},
+    ops::{Add, Sub},
+};
 
 use core::borrow::Borrow;
 
@@ -19,13 +19,15 @@ use core::borrow::Borrow;
 pub struct JsRuntime {
     env: Rc<RefCell<Environment>>,
     functions: Vec<Function>,
+    dom_root: Rc<RefCell<DomNode>>,
 }
 
 impl JsRuntime {
-    pub fn new() -> Self {
+    pub fn new(dom_root: Rc<RefCell<DomNode>>) -> Self {
         Self {
             env: Rc::new(RefCell::new(Environment::new(None))),
             functions: Vec::new(),
+            dom_root,
         }
     }
 
@@ -86,14 +88,54 @@ impl JsRuntime {
                         return None;
                     }
                 }
+
+                if let Some(RuntimeValue::HtmlElement { object, property }) =
+                    self.eval(left, env.clone())
+                {
+                    let right_value = match self.eval(right, env.clone()) {
+                        Some(value) => value,
+                        None => return None,
+                    };
+
+                    if let Some(p) = property {
+                        // target.textContent = "foobar";のようにノードのテキストを変更する
+                        if p == "textContent" {
+                            object
+                                .borrow_mut()
+                                .set_first_child(Some(Rc::new(RefCell::new(DomNode::new(
+                                    DomNodeKind::Text(right_value.to_string()),
+                                )))));
+                        }
+                    }
+                }
+
                 None
             }
-            Node::MemberExpression {
-                object: _,
-                property: _,
-            } => {
-                // TODO: 後で実装
-                None
+            Node::MemberExpression { object, property } => {
+                let object_value = match self.eval(object, env.clone()) {
+                    Some(value) => value,
+                    None => return None,
+                };
+                let property_value = match self.eval(property, env.clone()) {
+                    Some(value) => value,
+                    // プロパティが存在しないため 'object_value'をここで返す
+                    None => return Some(object_value),
+                };
+
+                // もしオブジェクトがDOMノードの場合、HtmlElementのpropertyを更新する
+                if let RuntimeValue::HtmlElement { object, property } = object_value {
+                    assert!(property.is_none());
+                    return Some(RuntimeValue::HtmlElement {
+                        object,
+                        property: Some(property_value.to_string()),
+                    });
+                }
+
+                // document.getElementByIdは"document.getElementById"という一つの文字列として扱う
+                // このメソッドへの呼び出しは、"document.getElementById"という名前の関数への呼び出しとなる
+                return Some(
+                    object_value + RuntimeValue::StringLiteral(".".to_string()) + property_value,
+                );
             }
             Node::NumericLiteral(value) => Some(RuntimeValue::Number(*value)),
             Node::VariableDeclaration { declarations } => {
@@ -148,6 +190,13 @@ impl JsRuntime {
                     None => return None,
                 };
 
+                // ブラウザAPIの呼び出しを試す
+                let api_result = self.call_browser_api(&callee_value, arguments, new_env.clone());
+                if api_result.0 {
+                    // もしブラウザAPIを呼び出していたらユーザーが定義した関数は実行しない
+                    return api_result.1;
+                }
+
                 // すでに定義されている関数を探す
                 let function = {
                     let mut f: Option<Function> = None;
@@ -180,6 +229,33 @@ impl JsRuntime {
             }
         }
     }
+
+    fn call_browser_api(
+        &mut self,
+        func: &RuntimeValue,
+        arguments: &[Option<Rc<Node>>],
+        env: Rc<RefCell<Environment>>,
+    ) -> (bool, Option<RuntimeValue>) {
+        if func == &RuntimeValue::StringLiteral("document.getElementById".to_string()) {
+            let arg = match self.eval(&arguments[0], env.clone()) {
+                Some(a) => a,
+                None => return (true, None),
+            };
+            let target = match get_element_by_id(Some(self.dom_root.clone()), &arg.to_string()) {
+                Some(n) => n,
+                None => return (true, None),
+            };
+            return (
+                true,
+                Some(RuntimeValue::HtmlElement {
+                    object: target,
+                    property: None,
+                }),
+            );
+        }
+
+        (false, None)
+    }
 }
 
 // JSランタイムで扱う値
@@ -187,6 +263,10 @@ impl JsRuntime {
 pub enum RuntimeValue {
     Number(u64),
     StringLiteral(String),
+    HtmlElement {
+        object: Rc<RefCell<DomNode>>,
+        property: Option<String>,
+    },
 }
 
 impl Add<RuntimeValue> for RuntimeValue {
@@ -266,6 +346,12 @@ impl Display for RuntimeValue {
         let s = match self {
             RuntimeValue::Number(value) => format!("{}", value),
             RuntimeValue::StringLiteral(value) => value.to_string(),
+            RuntimeValue::HtmlElement {
+                object,
+                property: _,
+            } => {
+                format!("HtmlElement: {:#?}", object)
+            }
         };
         write!(f, "{}", s)
     }
@@ -292,13 +378,16 @@ mod tests {
 
     use super::*;
 
+    use crate::renderer::dom::node::NodeKind as DomNodeKind;
+
     #[test]
     fn test_num() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "42".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [Some(RuntimeValue::Number(42))];
         let mut i = 0;
 
@@ -311,11 +400,12 @@ mod tests {
 
     #[test]
     fn test_add_nums() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "1 + 2".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [Some(RuntimeValue::Number(3))];
         let mut i = 0;
 
@@ -328,11 +418,12 @@ mod tests {
 
     #[test]
     fn test_sub_nums() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "3 - 1".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [Some(RuntimeValue::Number(2))];
         let mut i = 0;
 
@@ -345,11 +436,12 @@ mod tests {
 
     #[test]
     fn test_assign_variable() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "var foo=42;".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [None];
         let mut i = 0;
 
@@ -362,11 +454,12 @@ mod tests {
 
     #[test]
     fn test_add_variable_and_num() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "var foo=42; foo+1".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [None, Some(RuntimeValue::Number(43))];
         let mut i = 0;
 
@@ -379,11 +472,12 @@ mod tests {
 
     #[test]
     fn test_reassign_variable() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "var foo=42; foo=1; foo".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [None, None, Some(RuntimeValue::Number(1))];
         let mut i = 0;
 
@@ -396,11 +490,12 @@ mod tests {
 
     #[test]
     fn test_add_function_and_num() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "function foo() { return 42; } foo()+1".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [None, Some(RuntimeValue::Number(43))];
         let mut i = 0;
 
@@ -413,11 +508,12 @@ mod tests {
 
     #[test]
     fn test_local_variable() {
+        let dom = Rc::new(RefCell::new(DomNode::new(DomNodeKind::Document)));
         let input = "var a=42; function foo() { var a=1; return a; } foo()+a".to_string();
         let lexer = JsLexer::new(input);
         let mut parser = JsParser::new(lexer);
         let ast = parser.parse_ast();
-        let mut runtime = JsRuntime::new();
+        let mut runtime = JsRuntime::new(dom);
         let expected = [None, None, Some(RuntimeValue::Number(43))];
         let mut i = 0;
 
