@@ -26,32 +26,38 @@
  Page::receive_response()  ← ここからがPage主導      │
    saba_core/src/renderer/page.rs                    │
          │                                            │
-         ├─[4] HTML字句解析（トークナイズ）            │
-         │   renderer/html/token.rs                   │
-         │   HtmlTokenizer                            │
-         │         │                                  │
-         ├─[5] HTML構文解析（DOMツリー構築）            │
-         │   renderer/html/parser.rs                  │
-         │   HtmlParser::construct_tree()             │
-         │         │                                  │
-         ├─[6] CSS解析（CSSOMツリー構築）              │
-         │   renderer/css/cssom.rs                    │
-         │   CssParser::parse_stylesheet()            │
-         │         │                                  │
-         ├─[7] JavaScript実行（DOM変更）               │
-         │   renderer/js/runtime.rs                   │
-         │   JsRuntime::execute()                     │
-         │         │                                  │
-         ├─[8] レイアウトツリー構築                    │
-         │   renderer/layout/layout_view.rs           │
-         │   LayoutView::new()                        │
-         │   ├─ スタイル計算（カスケード・継承）         │
-         │   ├─ サイズ計算                             │
-         │   └─ 座標（位置）計算                       │
-         │         │                                  │
-         └─[9] ペインティング（DisplayItem生成）        │
-              display_item.rs                         │
-              LayoutView::paint()                     │
+         ↓                                            │
+        [4] HTML字句解析（トークナイズ）               │
+         renderer/html/token.rs                       │
+         HtmlTokenizer                                │
+         │                                            │
+         ↓                                            │
+        [5] HTML構文解析（DOMツリー構築）               │
+         renderer/html/parser.rs                      │
+         HtmlParser::construct_tree()                 │
+         │                                            │
+         ↓                                            │
+        [6] CSS解析（CSSOMツリー構築）                 │
+         renderer/css/cssom.rs                        │
+         CssParser::parse_stylesheet()                │
+         │                                            │
+         ↓                                            │
+        [7] JavaScript実行（DOM変更）                  │
+         renderer/js/runtime.rs                       │
+         JsRuntime::execute()                         │
+         │                                            │
+         ↓                                            │
+        [8] レイアウトツリー構築                       │
+         renderer/layout/layout_view.rs               │
+         LayoutView::new()                            │
+         ├─ スタイル計算（カスケード・継承）             │
+         ├─ サイズ計算                                │
+         └─ 座標（位置）計算                           │
+         │                                            │
+         ↓                                            │
+        [9] ペインティング（DisplayItem生成）           │
+         display_item.rs                              │
+         LayoutView::paint()                          │
                     │                                 │
                     ▼                                 │
          [10] 画面描画（OSへの描画命令）                │
@@ -66,6 +72,58 @@
 
 ---
 
+## 具体例：データが各段階でどう変わるか
+
+`<p class="foo">hello</p>` と `.foo { color: red }` を例に追う。
+
+**[4] → トークン列**
+```
+StartTag{ tag: "p", attributes: [{class, foo}] }
+Char('h'), Char('e'), Char('l'), Char('l'), Char('o')
+EndTag{ tag: "p" }
+Eof
+```
+
+**[5] → DOMツリー**
+```
+Document
+  └─ Element(html)
+       └─ Element(body)
+            └─ Element(p) [attributes: class="foo"]
+                 └─ Text("hello")
+```
+
+**[6] → CSSOM**
+```
+StyleSheet
+  └─ QualifiedRule
+       ├─ selector: ClassSelector("foo")
+       └─ declarations: [{ property: "color", value: Ident("red") }]
+```
+
+**[8] → レイアウトツリー**
+```
+LayoutObject { kind: Block, style: { color: red, display: Block }, point: (0,0), size: (800,20) }
+  └─ LayoutObject { kind: Text("hello"), style: { color: red }, point: (0,0) }
+```
+
+**[9] → DisplayItemリスト**
+```
+[
+  Rect  { point: (0,0), size: (800,20), bg_color: white },
+  Text  { text: "hello", color: red, point: (0,0) },
+]
+```
+
+**[10] → OSへの描画命令**
+```
+window.fill_rect(white, x+PADDING, y+PADDING+TOOLBAR_HEIGHT, 800, 20)
+window.draw_string(red, x+PADDING, y+PADDING+TOOLBAR_HEIGHT, "hello", ...)
+window.flush()
+```
+
+---
+
 ## 各段階の詳細
 
 ---
@@ -73,12 +131,6 @@
 ### [1] URL解析
 
 **ファイル**：`saba_core/src/url.rs`
-
-| 要素 | 内容 |
-|------|------|
-| 主要構造体 | `Url` |
-| 主要関数 | `Url::new(url)` → `Url::parse()` |
-| 内部ヘルパー | `extract_host()`, `extract_port()`, `extract_path()`, `extract_searchpart()` |
 
 **処理内容**：
 - `http://example.com:8080/path?query` という文字列を分解する
@@ -105,13 +157,7 @@ fn handle_url(url: String) -> Result<HttpResponse, Error> {
 
 **ファイル**：`net/wasabi/src/http.rs`
 
-| 要素 | 内容 |
-|------|------|
-| 主要構造体 | `HttpClient` |
-| 主要関数 | `HttpClient::get(host, port, path)` |
-| 依存クレート | `noli`（Wasabi OS のネットワークAPI） |
-
-**処理内容**（`get()` 内部の流れ）：
+**処理内容**（`HttpClient::get()` の流れ）：
 1. `lookup_host(host)` でDNS解決 → IPアドレス取得
 2. `TcpStream::connect(ip, port)` でTCP接続確立
 3. GETリクエスト文字列を送信（`Host:`, `Accept:`, `Connection: close` ヘッダ付き）
@@ -126,13 +172,7 @@ fn handle_url(url: String) -> Result<HttpResponse, Error> {
 
 **ファイル**：`saba_core/src/http.rs`
 
-| 要素 | 内容 |
-|------|------|
-| 主要構造体 | `HttpResponse`, `Header` |
-| 主要関数 | `HttpResponse::new(raw_response)` |
-| アクセサ | `version()`, `status_code()`, `reason()`, `headers()`, `body()`, `header_value(name)` |
-
-**処理内容**：
+**処理内容**（`HttpResponse::new()` でパース）：
 - 生テキスト（バイト列→UTF-8文字列）を受け取り構造化する
 - 1行目：`HTTP/1.1 200 OK` → version / status_code / reason に分解
 - 続く行：`Name: Value` → `Vec<Header>` に格納
@@ -152,12 +192,7 @@ status_code == 302 → header_value("Location") を取得 → 再度 handle_url(
 
 **ファイル**：`saba_core/src/renderer/html/token.rs`
 
-| 要素 | 内容 |
-|------|------|
-| 主要構造体 | `HtmlTokenizer`, `HtmlToken`（enum）, `State`（enum） |
-| 主要関数 | `HtmlTokenizer::new(html)`, `Iterator::next()`（1トークンずつ返す） |
-
-**`HtmlToken` の種類**：
+**`HtmlToken` の種類**（`HtmlTokenizer` が `State` ステートマシンで生成）：
 ```rust
 enum HtmlToken {
     StartTag { tag, self_closing, attributes },  // <div class="foo">
@@ -181,14 +216,16 @@ enum HtmlToken {
 
 ### [5] HTML構文解析（DOMツリー構築）
 
-**ファイル**：`saba_core/src/renderer/html/parser.rs`
-**DOM定義**：`saba_core/src/renderer/dom/node.rs`
+**ファイル**：`saba_core/src/renderer/html/parser.rs`、DOM定義は `saba_core/src/renderer/dom/node.rs`
 
-| 要素 | 内容 |
-|------|------|
-| 主要構造体 | `HtmlParser`, `InsertionMode`（enum） |
-| 主要関数 | `HtmlParser::construct_tree()` |
-| DOM構造体 | `Node`, `NodeKind`（Document/Element/Text）, `Element`, `ElementKind`, `Window` |
+**DOMツリーの構造**（`<p>hello</p>` の場合）：
+```
+Document
+  └─ Element(html)
+       └─ Element(body)
+            └─ Element(p)
+                 └─ Text("hello")
+```
 
 **`InsertionMode`（挿入モード）**：
 ```
@@ -223,19 +260,9 @@ struct Node {
 
 ### [6] CSS解析（CSSOMツリー構築）
 
-**ファイル**：
-- 字句解析：`saba_core/src/renderer/css/token.rs`
-- 構文解析：`saba_core/src/renderer/css/cssom.rs`
-- CSS取得元：`saba_core/src/renderer/dom/api.rs`
+**ファイル**：字句解析 `saba_core/src/renderer/css/token.rs`、構文解析 `saba_core/src/renderer/css/cssom.rs`、CSS取得 `saba_core/src/renderer/dom/api.rs`
 
-| 要素 | 内容 |
-|------|------|
-| 字句解析 | `CssTokenizer`, `CssToken`（HashToken/Delim/Number/Ident/等） |
-| 構文解析 | `CssParser`, `StyleSheet`, `QualifiedRule`, `Selector`, `Declaration` |
-| 主要関数 | `CssParser::parse_stylesheet()` |
-| CSS取得 | `get_style_content(dom_root)` → `<style>` タグの中身を文字列で返す |
-
-**CSSOMの構造**：
+**CSSOMの構造**（`get_style_content()` で `<style>` タグから取得後、`CssParser::parse_stylesheet()` でパース）：
 ```
 StyleSheet
   └─ Vec<QualifiedRule>
@@ -255,13 +282,7 @@ StyleSheet
 
 ### [7] JavaScript実行（DOM変更）
 
-**ファイル**：`saba_core/src/renderer/js/`
-
-| ファイル | 構造体 | 役割 |
-|----------|--------|------|
-| `token.rs` | `JsLexer` | JS文字列を字句解析してトークン列を生成 |
-| `ast.rs` | `JsParser` | トークン列を構文解析してAST（抽象構文木）を構築 |
-| `runtime.rs` | `JsRuntime` | ASTを実行してDOMを変更可能 |
+**ファイル**：`saba_core/src/renderer/js/`（`token.rs` → `JsLexer`、`ast.rs` → `JsParser`、`runtime.rs` → `JsRuntime`）
 
 **呼び出し元**：`Page::execute_js()`（`renderer/page.rs`）
 
@@ -287,49 +308,29 @@ JsRuntime::new(dom).execute(&ast) → DOM変更
 
 ### [8] レイアウトツリー構築
 
-**ファイル**：
-- `saba_core/src/renderer/layout/computed_style.rs`
-- `saba_core/src/renderer/layout/layout_object.rs`
-- `saba_core/src/renderer/layout/layout_view.rs`
+**ファイル**：`saba_core/src/renderer/layout/computed_style.rs`、`layout_object.rs`、`layout_view.rs`
 
-#### 8-1. スタイル計算
-
-| 要素 | 内容 |
-|------|------|
-| 構造体 | `ComputedStyle` |
-| プロパティ | `color`, `background_color`, `display`, `font_size`, `text_decoration`, `width`, `height` |
-| カスケード | `LayoutObject::cascading_style(declarations)` → CSSOMのルールを適用 |
-| セレクタマッチ | `LayoutObject::is_node_selected(selector)` → セレクタとDOMノードを照合 |
-| 継承・デフォルト | `ComputedStyle::defaulting(node, parent_style)` → 未指定プロパティを親から継承 |
+**① スタイル計算**：`build_layout_tree()` 内で各DOMノードに対して実行
+- `LayoutObject::is_node_selected(selector)` でセレクタマッチング
+- `LayoutObject::cascading_style(declarations)` でCSSOMのルールを適用
+- `ComputedStyle::defaulting(node, parent_style)` で未指定プロパティを親から継承
+- `ComputedStyle` が持つプロパティ：`color`、`background_color`、`display`、`font_size`、`text_decoration`、`width`、`height`
 
 **デフォルト値の例**：
 - `<h1>` → `font_size = XXLarge`, `display = Block`
 - `<a>` → `text_decoration = Underline`
 - `<p>` → `display = Block`
 
-#### 8-2. レイアウトオブジェクト
+**② サイズ計算**：`calculate_node_size(node, parent_size)` で再帰的に確定
+- `LayoutObject::compute_size(parent_size)` → 親サイズを基に幅・高さを決定
 
-| 要素 | 内容 |
-|------|------|
-| 構造体 | `LayoutObject` |
-| フィールド | `kind`（Block/Inline/Text）, `style`（ComputedStyle）, `point`（x,y）, `size`（width,height） |
-| サイズ計算 | `compute_size(parent_size)` → 親サイズを基に幅・高さを決定 |
-| 座標計算 | `compute_position(parent_point, prev_sibling_*)` → 前の兄弟要素に基づいて配置 |
+**③ 座標計算**：`calculate_node_position(node, parent_point, prev_sibling_*)` で再帰的に確定
+- `LayoutObject::compute_position(parent_point, prev_sibling_*)` → 前の兄弟要素に基づいて配置
 
 **Blockとインラインの違い**：
 - `Block`：幅いっぱいに広がり、前後で改行（`<p>`, `<h1>`, `<h2>`）
 - `Inline`：文章の流れに沿って横に並ぶ（`<a>`）
 - `Text`：テキストノード（インラインに準じた扱い）
-
-#### 8-3. レイアウトビュー（全体ツリー）
-
-| 要素 | 内容 |
-|------|------|
-| 構造体 | `LayoutView` |
-| 主要関数 | `LayoutView::new(dom_root, cssom)` → ツリー全体を構築 |
-| 構築関数 | `build_layout_tree(node, parent_obj, cssom)` → 再帰的に構築、`display:none` をスキップ |
-| サイズ計算 | `calculate_node_size(node, parent_size)` → 再帰的に全ノードのサイズを確定 |
-| 座標計算 | `calculate_node_position(node, parent_point, prev_sibling_*)` → 再帰的に全座標を確定 |
 
 **ポイント**：
 > レイアウト段階ではDOMツリーとCSSOMを合わせて「どのノードがどのスタイルを持つか」を決め（カスケード）、さらに「画面上のどこに何ピクセルで配置するか」を計算する。ブロック要素は縦に積み重なり、インライン要素は横に並ぶというのがCSSレイアウトの基本。
@@ -371,15 +372,8 @@ enum DisplayItem {
 
 **ファイル**：`ui/wasabi/src/app.rs`
 
-| 要素 | 内容 |
-|------|------|
-| 主要構造体 | `WasabiUI` |
-| 主要関数 | `WasabiUI::update_ui()` |
-| OS API | `window.draw_string(...)`, `window.fill_rect(...)`, `window.flush()` |
-
-**`update_ui()` の処理**：
+**`update_ui()` の処理**（`WasabiUI` 構造体）：
 ```rust
-// DisplayItemリストをOSの描画APIに変換
 for item in page.display_items() {
     match item {
         DisplayItem::Text { text, style, layout_point } =>
@@ -434,29 +428,3 @@ Page（saba_core/src/renderer/page.rs）
   ├─ layout_view: Option<LayoutView> → レイアウトツリーの根
   └─ display_items: Vec<DisplayItem> → 最終的な描画命令リスト
 ```
-
----
-
-## キーワード早見表
-
-| 用語 | このコードでの対応 |
-|------|------------------|
-| URLパース | `Url::parse()` in `url.rs` |
-| DNS解決 | `lookup_host()` in `net/wasabi/src/http.rs` |
-| TCPコネクション | `TcpStream::connect()` in `net/wasabi/src/http.rs` |
-| HTTPリクエスト/レスポンス | `HttpClient::get()`, `HttpResponse::new()` |
-| リダイレクト（302） | `src/main.rs` の `handle_url()` で再帰処理 |
-| HTML字句解析（トークナイザ） | `HtmlTokenizer` + `State` ステートマシン |
-| HTML構文解析（パーサ） | `HtmlParser::construct_tree()` + `InsertionMode` |
-| DOMツリー | `Node` / `NodeKind` / `Window` in `dom/node.rs` |
-| CSS字句解析 | `CssTokenizer` in `css/token.rs` |
-| CSSOMツリー | `StyleSheet` / `QualifiedRule` / `Selector` / `Declaration` |
-| カスケード（スタイル適用） | `LayoutObject::cascading_style()` |
-| スタイルの継承 | `ComputedStyle::defaulting()` |
-| セレクタマッチング | `LayoutObject::is_node_selected()` |
-| レイアウトツリー（ボックスツリー） | `LayoutObject` / `LayoutView` |
-| ブロック/インラインレイアウト | `LayoutObjectKind::Block / Inline / Text` |
-| ペインティング | `LayoutView::paint()` → `Vec<DisplayItem>` |
-| フレームバッファへの描画 | `WasabiUI::update_ui()` → `window.flush()` |
-| ヒットテスト（クリック検出） | `LayoutView::find_node_by_position()` |
-
